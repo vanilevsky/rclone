@@ -319,9 +319,8 @@ func (f *Fs) readMetaDataForPath(ctx context.Context, path string, options *api.
 	if err != nil {
 		if resp != nil && resp.StatusCode == 404 {
 			return nil, fs.ErrorDirNotFound
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 
 	return &info, nil
@@ -373,9 +372,8 @@ func (f *Fs) findObject(ctx context.Context, path string, name string) (*api.Rea
 	if err != nil {
 		if resp != nil && resp.StatusCode == 404 {
 			return nil, fs.ErrorDirNotFound
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 
 	return &info, nil
@@ -393,8 +391,8 @@ func (f *Fs) findObject(ctx context.Context, path string, name string) (*api.Rea
 func (f *Fs) List(ctx context.Context, dir string) (entries fs.DirEntries, err error) {
 	root := f.dirPath(dir)
 
-	var limit uint64 = 500        // max number of objects per request - 100 seems to be the maximum the api accepts
-	var nextPageToken string = "" // for the next page of requests
+	var limit uint64 = 500   // max number of objects per request - 100 seems to be the maximum the api accepts
+	var nextPageToken string // for the next page of requests
 
 	for {
 		opts := &api.MetadataRequestOptions{
@@ -516,6 +514,7 @@ func (f *Fs) updateFileInformation(ctx context.Context, update *api.UpdateFileIn
 	return err
 }
 
+// MD5 returns the MD5 sum of the file
 func MD5(text string) string {
 	algorithm := md5.New()
 	algorithm.Write([]byte(text))
@@ -582,7 +581,10 @@ func (f *Fs) putUnchecked(ctx context.Context, in0 io.Reader, src fs.ObjectInfo,
 	for partNo := 1; partNo <= int(totalParts); partNo++ {
 
 		if existing, ok := existingParts[partNo]; ok {
-			io.CopyN(io.Discard, in, existing.Size)
+			_, err := io.CopyN(io.Discard, in, existing.Size)
+			if err != nil {
+				return fmt.Errorf("failed while discarding: %w", err)
+			}
 			partsToCommit = append(partsToCommit, existing)
 			uploadedSize += existing.Size
 			continue

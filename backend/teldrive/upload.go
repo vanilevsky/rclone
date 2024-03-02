@@ -50,7 +50,11 @@ func (w *objectChunkWriter) WriteChunk(ctx context.Context, chunkNumber int, rea
 	chunkNumber += 1
 
 	if existing, ok := w.existingParts[chunkNumber]; ok {
-		io.CopyN(io.Discard, reader, existing.Size)
+		_, err := io.CopyN(io.Discard, reader, existing.Size)
+		if err != nil {
+			// Handle error appropriately here...
+			return 0, fmt.Errorf("failed while discarding: %w", err)
+		}
 		w.addCompletedPart(existing)
 		return existing.Size, nil
 	}
